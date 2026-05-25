@@ -65,7 +65,7 @@ if [ -z "$PROJECT_ID" ]; then
     exit 1
 fi
 
-REGION="${REGION:-us-central1}"
+REGION="${REGION:-us-west1}"
 SERVICE_NAME="${SERVICE_NAME:-workflowx-dev}"
 SERVICE_PORT="${SERVICE_PORT:-8080}"
 SERVICE_MEMORY="${SERVICE_MEMORY:-1Gi}"
@@ -88,15 +88,19 @@ print_success "npm is installed"
 if ! command_exists gcloud; then print_error "gcloud CLI is not installed."; exit 1; fi
 print_success "gcloud is installed"
 
-# Service account credentials are handled by google-github-actions/auth
-# GOOGLE_APPLICATION_CREDENTIALS is set automatically in GitHub Actions
-
-print_info "Checking GCP authentication..."
-if gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null | grep -q "@"; then
-    SERVICE_ACCOUNT_EMAIL=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null | head -n 1)
-    print_success "GCP authenticated as: $SERVICE_ACCOUNT_EMAIL"
+# In GitHub Actions, GOOGLE_APPLICATION_CREDENTIALS is set by google-github-actions/auth
+# So we don't need to use a service account key file
+if [ -n "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+    print_info "Using GitHub Actions service account credentials"
+elif [ -n "$SERVICE_ACCOUNT_KEY_PATH" ] && [ -f "$SERVICE_ACCOUNT_KEY_PATH" ]; then
+    print_info "Activating service account from key file..."
+    if ! gcloud auth activate-service-account --key-file="$SERVICE_ACCOUNT_KEY_PATH" --quiet 2>&1; then
+        print_error "Failed to activate service account"
+        exit 1
+    fi
+    print_success "Service account activated"
 else
-    print_error "GCP authentication failed - no active service account"
+    print_error "No GCP credentials found. Set SERVICE_ACCOUNT_KEY_PATH or use GitHub Actions"
     exit 1
 fi
 
