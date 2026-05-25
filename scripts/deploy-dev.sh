@@ -65,7 +65,7 @@ if [ -z "$PROJECT_ID" ]; then
     exit 1
 fi
 
-REGION="${REGION:-us-west1}"
+REGION="${REGION:-us-central1}"
 SERVICE_NAME="${SERVICE_NAME:-workflowx-dev}"
 SERVICE_PORT="${SERVICE_PORT:-8080}"
 SERVICE_MEMORY="${SERVICE_MEMORY:-1Gi}"
@@ -88,22 +88,15 @@ print_success "npm is installed"
 if ! command_exists gcloud; then print_error "gcloud CLI is not installed."; exit 1; fi
 print_success "gcloud is installed"
 
-if [ -z "$SERVICE_ACCOUNT_KEY_PATH" ]; then
-    print_error "SERVICE_ACCOUNT_KEY_PATH not set in .env file"
-    exit 1
-fi
+# Service account credentials are handled by google-github-actions/auth
+# GOOGLE_APPLICATION_CREDENTIALS is set automatically in GitHub Actions
 
-if [ ! -f "$SERVICE_ACCOUNT_KEY_PATH" ]; then
-    print_error "Service account key file not found: $SERVICE_ACCOUNT_KEY_PATH"
-    exit 1
-fi
-
-print_info "Activating service account..."
-if gcloud auth activate-service-account --key-file="$SERVICE_ACCOUNT_KEY_PATH" --quiet 2>&1; then
+print_info "Checking GCP authentication..."
+if gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null | grep -q "@"; then
     SERVICE_ACCOUNT_EMAIL=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null | head -n 1)
-    print_success "Service account activated: $SERVICE_ACCOUNT_EMAIL"
+    print_success "GCP authenticated as: $SERVICE_ACCOUNT_EMAIL"
 else
-    print_error "Failed to activate service account"
+    print_error "GCP authentication failed - no active service account"
     exit 1
 fi
 
@@ -168,5 +161,5 @@ if SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" --region "$REGION"
 fi
 
 cleanup_old_images
-print_success "Happy coding! 🎉"
+print_success "Happy coding!"
 echo ""
