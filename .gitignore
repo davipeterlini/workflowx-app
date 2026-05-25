@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+.env.example
+scripts/.env*
+scripts/*.json
+scripts/setup
+scripts/service-account-key.json
+coverage/
+*.log
+.DS_Store
+.vite/
+.cache/
